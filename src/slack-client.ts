@@ -220,7 +220,7 @@ export class SlackFeedbackClient {
             username,
             text: msg.text || '',
             ts: msg.ts!,
-            thread_ts: msg.thread_ts,
+            thread_ts: (msg as any).thread_ts,
             channel: msg.channel?.id || '',
             permalink: msg.permalink
           };
