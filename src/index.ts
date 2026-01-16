@@ -39,6 +39,7 @@ const slackClient = new SlackFeedbackClient(
 
 // Create Express app
 const app = express();
+app.use(express.json());
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
@@ -102,6 +103,42 @@ app.get('/sse', async (req: Request, res: Response) => {
   req.on('close', () => {
     console.log('SSE connection closed');
   });
+});
+
+// POST endpoint for SSE (required by MCP SDK client)
+app.post('/sse', async (req: Request, res: Response) => {
+  // SSE transport handles POST requests internally
+  // This endpoint receives the message and the GET connection sends the response
+  res.status(202).json({ status: 'accepted' });
+});
+
+// Test endpoint for direct tool testing (bypasses MCP for debugging)
+app.post('/test-tool', async (req: Request, res: Response) => {
+  try {
+    const { tool, args } = req.body;
+
+    if (!tool) {
+      return res.status(400).json({ error: 'tool name is required' });
+    }
+
+    console.log(`[Test] Calling tool: ${tool}`, args);
+
+    const result = await executeTool(tool, args || {}, slackClient);
+
+    res.json({
+      success: true,
+      tool,
+      args,
+      result
+    });
+
+  } catch (error) {
+    console.error('[Test] Error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tool: req.body.tool
+    });
+  }
 });
 
 // Start server
